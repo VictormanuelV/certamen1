@@ -1,8 +1,5 @@
 import express from 'express'
-import { rejects } from 'node:assert'
 import { scrypt, randomBytes, randomUUID } from 'node:crypto'
-import { resolve } from 'node:path'
-import { Script } from 'node:vm'
 
 const app = express()
 
