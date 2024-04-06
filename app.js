@@ -1,4 +1,4 @@
-import express from 'express'
+import express, { response } from 'express'
 import { scrypt, randomBytes, randomUUID } from 'node:crypto'
 
 const app = express()
@@ -61,10 +61,6 @@ const validarPassword = (password, hash) => {
 }
 
 // Rutas.
-app.get('/test', (request, response) => {
-	console.log(generarToken());
-});
-
 app.get('/api', (request, response) => {
 	response.setHeader('Content-Type', 'text/plain');	
 	response.setHeader('Cache-Control', 'no-store');
@@ -98,6 +94,7 @@ app.post('/api/login', async (request, response) => {
 				name: usuario.name,
 				token: usuario.token
 			} );
+			
 		}else{
 			console.log('Credenciales incorrectas (401)');
 			response.status(401).json({ mensaje: 'Credenciales incorrectas (401)'} );
@@ -110,7 +107,43 @@ app.post('/api/login', async (request, response) => {
 
 });
 
+// LISTAR ITEMS.
 app.get('/api/todos', tokenMiddleware, (request, response) => {
+	console.log(request.headers['x-authorization']);
+	const items = [
+		{
+			id: 1,
+			title: 'Primer item',
+			completed: false
+		}
+	];
+
+	response.setHeader('Content-Type', 'application/json')
+	response.status(200).json(items);
+});
+
+// CREAR ITEM.
+app.post('/api/todos/', (request, response) => {
+	const titulo = request.body.title;
+
+	if(!titulo){
+		return response.status(400).json({ message: 'Operacion incorrecta'} );
+	}
+
+	const randomId = () => {
+		const randomValue = randomUUID();
+		const existe = users.find(user => user.id === randomValue);
+		if(existe){
+			return randomId();
+		}else{
+			return randomValue;
+		}
+	}
+	
+
+
+	//console.log(randomId)
+
 
 });
 
