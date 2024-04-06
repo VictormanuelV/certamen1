@@ -1,5 +1,6 @@
 import express, { response } from 'express'
 import { scrypt, randomBytes, randomUUID } from 'node:crypto'
+import { title } from 'node:process'
 
 const app = express()
 
@@ -131,20 +132,21 @@ app.post('/api/todos/', (request, response) => {
 	}
 
 	const randomId = () => {
-		const randomValue = randomUUID();
-		const existe = users.find(user => user.id === randomValue);
-		if(existe){
-			return randomId();
-		}else{
-			return randomValue;
-		}
+		let randomValue;
+		let existe = false;
+
+		do{
+			randomValue = randomUUID();
+			existe = users.find(user => user.id === randomValue);
+		}while(existe);
+		return randomValue;
 	}
-	
 
-
-	//console.log(randomId)
-
-
+	return response.status(201).json({
+		id: randomId(),
+		title: titulo,
+		completed: false
+	})
 });
 
 // ... hasta aquí
