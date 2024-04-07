@@ -1,6 +1,5 @@
 import express, { response } from 'express'
 import { scrypt, randomBytes, randomUUID } from 'node:crypto'
-import { title } from 'node:process'
 
 const app = express()
 
@@ -20,7 +19,6 @@ app.use(express.json());
 
 const tokenMiddleware = (request, response, next) => {
 	const token = request.headers['x-authorization'];
-	console.log(token)
 	if(!token){
 		return response.status(401).json({ error: 'No ha proporcionado el token' });
 	}
@@ -29,7 +27,6 @@ const tokenMiddleware = (request, response, next) => {
 	if(!usuario){
 		return response.status(401).json({ error: 'Token no valido.' });
 	}
-
 	next();
 }
 
@@ -72,7 +69,6 @@ app.post('/api/login', async (request, response) => {
 	const { username, password } = request.body;
 
 	if(typeof(username) !== 'string' || username === ""){
-		console.log('400 Petición mala.');
 		return response.status(400).json({ error: 'Peticion mala (400)' });
 	}
 
@@ -89,7 +85,6 @@ app.post('/api/login', async (request, response) => {
 			const token = randomBytes(48).toString('hex');
 			usuario.token = token;
 
-			console.log('Operacion correcta (200)');
 			response.status(200).json({
 				username: usuario.username,
 				name: usuario.name,
@@ -97,12 +92,10 @@ app.post('/api/login', async (request, response) => {
 			} );
 			
 		}else{
-			console.log('Credenciales incorrectas (401)');
 			response.status(401).json({ mensaje: 'Credenciales incorrectas (401)'} );
 		}
 	}catch(error){
 		response.status(500).json({ mensaje: 'Problema en el servidor (500)'} );
-		console.log('Problema en el servidor (500)');
 	}
 
 
@@ -110,21 +103,19 @@ app.post('/api/login', async (request, response) => {
 
 // LISTAR ITEMS.
 app.get('/api/todos', tokenMiddleware, (request, response) => {
-	console.log(request.headers['x-authorization']);
-	const items = [
-		{
-			id: 1,
+	const item ={
+			id: 'sdfsjkddh223',
 			title: 'Primer item',
 			completed: false
-		}
-	];
+	}
+	todos.push(item);
 
 	response.setHeader('Content-Type', 'application/json')
-	response.status(200).json(items);
+	response.status(200).json(todos);
 });
 
 // CREAR ITEM.
-app.post('/api/todos/', (request, response) => {
+app.post('/api/todos/', tokenMiddleware, (request, response) => {
 	const titulo = request.body.title;
 
 	if(!titulo){
@@ -137,16 +128,41 @@ app.post('/api/todos/', (request, response) => {
 
 		do{
 			randomValue = randomUUID();
-			existe = users.find(user => user.id === randomValue);
+			existe = todos.find(item => item.id === randomValue);
 		}while(existe);
 		return randomValue;
 	}
-
-	return response.status(201).json({
+	const nuevoItem = {
 		id: randomId(),
 		title: titulo,
 		completed: false
-	})
+	}
+
+	todos.push(nuevoItem)
+	return response.status(201).json(nuevoItem);
+});
+
+// ACTUALIZAR ITEM.
+app.put('/api/todos/:id', tokenMiddleware, (request, response) => {
+	const { id } = request.params;
+	const { title, completed } = request.body;
+	const indiceItem = todos.findIndex(item => item.id === id);
+
+	if(indiceItem === -1){
+		return response.status(404);
+	}
+
+	if(completed !== undefined){
+		if(typeof completed !== 'boolean') return response.status(400).send();
+		todos[indiceItem].completed = completed;
+	}
+
+	if(title !== undefined){
+		if(typeof title !== 'string' || title === '') return response.status(400).send();	
+		todos[indiceItem].title = title;
+	}
+
+	return response.status(201).json(todos[indiceItem]);
 });
 
 // ... hasta aquí
