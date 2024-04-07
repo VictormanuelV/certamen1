@@ -14,7 +14,7 @@ app.use(express.static('public'))
 
 // Su código debe ir aquí...
 
-// Middlewares.
+// ============================================= MIDDLEWARES ===================================================
 app.use(express.json());
 
 const tokenMiddleware = (request, response, next) => {
@@ -30,21 +30,7 @@ const tokenMiddleware = (request, response, next) => {
 	next();
 }
 
-//Crear hash de la contraseña (no es necesario para este caso ya que se usa el usuario de ejemplo.)
-const hashPassword = (password, callback) =>{
-	const salt = randomBytes(16).toString('hex');
-	const keylen = 64;	// Longitu de la clave.
-
-	scrypt(password, salt, keylen, (error, key) =>{
-		if(error){
-			callback(error);
-		} 
-		const hash = `${salt}:${key.toString('hex')}`;
-		callback(null, hash);
-	});
-}
-
-
+// ============================================= FUNCION VALIDAR PASSWORD ======================================
 const validarPassword = (password, hash) => {
 	return new Promise((resolve, reject) => {
 		const [salt, clave] = hash.split(':');
@@ -58,32 +44,33 @@ const validarPassword = (password, hash) => {
 
 }
 
-// Rutas.
+// ============================================= RUTAS DE LA API ===============================================
+// ============================================= HELLO WORLD ===================================================
 app.get('/api', (request, response) => {
 	response.setHeader('Content-Type', 'text/plain');	
 	response.setHeader('Cache-Control', 'no-store');
 	response.status(200).send('Hello World!');
 });
 
+// ============================================= LOGIN =========================================================
 app.post('/api/login', async (request, response) => {
 	const { username, password } = request.body;
 
-	if(typeof(username) !== 'string' || username === ""){
-		return response.status(400).json({ error: 'Peticion mala (400)' });
-	}
+	if(typeof username !== 'string' || username === "") return response.status(400).send();
+	if(typeof password !== 'string' || password === "") return response.status(400).send();
 
 	const usuario = users.find(user => user.username === username);
 
-	if(!usuario){
-		return response.status(401).json({ error: 'No autorizado (401).'})
-	}
-
+	if(!usuario) return response.status(401).send();
+		
 	try{
 		const sonIguales = await validarPassword(password, usuario.password);
 
 		if(sonIguales){
 			const token = randomBytes(48).toString('hex');
 			usuario.token = token;
+
+			response.setHeader('Content-Type', 'application/json');
 
 			response.status(200).json({
 				username: usuario.username,
@@ -92,35 +79,41 @@ app.post('/api/login', async (request, response) => {
 			} );
 			
 		}else{
-			response.status(401).json({ mensaje: 'Credenciales incorrectas (401)'} );
+			response.status(401).send();
 		}
 	}catch(error){
-		response.status(500).json({ mensaje: 'Problema en el servidor (500)'} );
+		response.status(500).json({ mensaje: 'Problema interno. Contacte al administrador.'} );
 	}
-
-
 });
 
-// LISTAR ITEMS.
+// ============================================= LISTAR ITEMS ==================================================
 app.get('/api/todos', tokenMiddleware, (request, response) => {
-	const item ={
-			id: 'sdfsjkddh223',
+	let itemsTest = [
+		{
+			id: '9f445963-f18b-490b-91dc-4ecad2e1d449',
 			title: 'Primer item',
 			completed: false
-	}
-	todos.push(item);
+		},
+		{
+			id: 'mh985963-f18b-490b-91dc-4ecad2e1d449',
+			title: 'Segundo item',
+			completed: false
+		}
+	];
+	itemsTest.forEach(item => {
+		todos.push(item);
+	});
 
-	response.setHeader('Content-Type', 'application/json')
+	response.setHeader('Content-Type', 'application/json');
+	response.setHeader('Cache-Control', 'no-store');
 	response.status(200).json(todos);
 });
 
-// CREAR ITEM.
+// ============================================= CREACION DE ITEM ==============================================
 app.post('/api/todos/', tokenMiddleware, (request, response) => {
 	const titulo = request.body.title;
 
-	if(!titulo){
-		return response.status(400).json({ message: 'Operacion incorrecta'} );
-	}
+	if(!titulo || typeof titulo !== 'string') return response.status(400).send();
 
 	const randomId = () => {
 		let randomValue;
@@ -132,6 +125,7 @@ app.post('/api/todos/', tokenMiddleware, (request, response) => {
 		}while(existe);
 		return randomValue;
 	}
+
 	const nuevoItem = {
 		id: randomId(),
 		title: titulo,
@@ -139,18 +133,17 @@ app.post('/api/todos/', tokenMiddleware, (request, response) => {
 	}
 
 	todos.push(nuevoItem)
+	response.setHeader('Content-Type', 'application/json');
 	return response.status(201).json(nuevoItem);
 });
 
-// ACTUALIZAR ITEM.
+// ============================================= ACTUALIZACION DE ITEM =========================================
 app.put('/api/todos/:id', tokenMiddleware, (request, response) => {
 	const { id } = request.params;
 	const { title, completed } = request.body;
 	const indiceItem = todos.findIndex(item => item.id === id);
 
-	if(indiceItem === -1){
-		return response.status(404).send();
-	}
+	if(indiceItem === -1) return response.status(404).send();
 
 	if(completed !== undefined){
 		if(typeof completed !== 'boolean') return response.status(400).send();
@@ -166,10 +159,10 @@ app.put('/api/todos/:id', tokenMiddleware, (request, response) => {
 	return response.status(200).json(todos[indiceItem]);
 });
 
-// ELIMINAR ITEM.
+// ============================================= BORRADO DE ITEM ===============================================
 app.delete('/api/todos/:id', tokenMiddleware, (request, response) => {
 	const id = request.params.id;
-	const indiceItem = todos.find(item => item.id === id);
+	const indiceItem = todos.findIndex(item => item.id === id);
 
 	if(indiceItem === -1) return response.status(404).send();
 	todos.splice(indiceItem, 1);
