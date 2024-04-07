@@ -149,7 +149,7 @@ app.put('/api/todos/:id', tokenMiddleware, (request, response) => {
 	const indiceItem = todos.findIndex(item => item.id === id);
 
 	if(indiceItem === -1){
-		return response.status(404);
+		return response.status(404).send();
 	}
 
 	if(completed !== undefined){
@@ -162,7 +162,18 @@ app.put('/api/todos/:id', tokenMiddleware, (request, response) => {
 		todos[indiceItem].title = title;
 	}
 
-	return response.status(201).json(todos[indiceItem]);
+	response.setHeader('Content-Type', 'application/json')
+	return response.status(200).json(todos[indiceItem]);
+});
+
+// ELIMINAR ITEM.
+app.delete('/api/todos/:id', tokenMiddleware, (request, response) => {
+	const id = request.params.id;
+	const indiceItem = todos.find(item => item.id === id);
+
+	if(indiceItem === -1) return response.status(404).send();
+	todos.splice(indiceItem, 1);
+	response.status(204).send();
 });
 
 // ... hasta aquí
