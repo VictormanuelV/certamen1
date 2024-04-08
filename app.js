@@ -36,7 +36,7 @@ const validarPassword = (password, hash) => {
 		const [salt, clave] = hash.split(':');
 		scrypt(password, salt, 64, (error, key) => {
 			if(error){
-				reject(error);
+				reject(false);
 			}
 			resolve(key.toString('hex')===clave);
 		});
@@ -65,6 +65,7 @@ app.post('/api/login', async (request, response) => {
 		
 	try{
 		const sonIguales = await validarPassword(password, usuario.password);
+		if(typeof sonIguales !== 'boolean') sonIguales = false;
 
 		if(sonIguales){
 			const token = randomBytes(48).toString('hex');
@@ -88,6 +89,9 @@ app.post('/api/login', async (request, response) => {
 
 // ============================================= LISTAR ITEMS ==================================================
 app.get('/api/todos', tokenMiddleware, (request, response) => {
+	while(todos.length > 0){
+		todos.pop();
+	}
 	let itemsTest = [
 		{
 			id: '9f445963-f18b-490b-91dc-4ecad2e1d449',
@@ -100,6 +104,7 @@ app.get('/api/todos', tokenMiddleware, (request, response) => {
 			completed: false
 		}
 	];
+
 	itemsTest.forEach(item => {
 		todos.push(item);
 	});
@@ -107,6 +112,16 @@ app.get('/api/todos', tokenMiddleware, (request, response) => {
 	response.setHeader('Content-Type', 'application/json');
 	response.setHeader('Cache-Control', 'no-store');
 	response.status(200).json(todos);
+});
+
+// ============================================= OBTENER ITEM ==================================================
+app.get('/api/todos/:id', tokenMiddleware, (request, response) => {
+	const id = request.params.id;
+	const item = todos.find(item => item.id === id);
+
+	if(!item) return response.status(404).send();
+	response.setHeader('Content-Type', 'application/json');
+	response.status(200).json(item);
 });
 
 // ============================================= CREACION DE ITEM ==============================================
